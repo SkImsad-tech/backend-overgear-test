@@ -1,7 +1,7 @@
-import { Body, Injectable } from '@nestjs/common';
+import { Body, HttpStatus, Injectable } from '@nestjs/common';
 import { db } from './db/index'
-import { User } from './db/models/user'
-import { Account } from './db/models/account'
+import { User } from './db/models/user.entity'
+import { Account } from './db/models/account.entity'
 import { UserBody, PaymentBody, TransferBody } from './controller'
 
 @Injectable()
@@ -15,14 +15,14 @@ export class AppProvider {
     }
 
     createUser(@Body() body: UserBody): void {
-        db.createUser(body.email)
+        db.createUser(body);
     }
 
     makePayment(@Body() body: PaymentBody): Promise<void> {
-        return db.makePayment(body.amount, body.paymentId, body.email);
+        return db.makePayment(body);
     }
 
     makeTransfer(@Body() body: TransferBody): Promise<void> {
-        return db.makeTransfer(body.amount, body.userFrom, body.userTo);
+        return db.makeTransfer(body);
     }
 }

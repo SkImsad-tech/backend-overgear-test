@@ -1,7 +1,7 @@
 import { Controller, Get, Post, HttpCode, Body,  } from '@nestjs/common'
 import { AppProvider } from './provider'
-import { User } from './db/models/user'
-import { Account } from './db/models/account'
+import { User } from './db/models/user.entity'
+import { Account } from './db/models/account.entity'
 
 export type UserBody = {
     email: string;
@@ -14,6 +14,7 @@ export type PaymentBody = {
 }
 
 export type TransferBody = {
+    paymentId?: String;
     amount: number;
     userFrom: string;
     userTo: string;
@@ -46,6 +47,7 @@ export class AppController {
     }
 
     @Post('/accounts/transfer')
+    @HttpCode(200)
     Transfer(@Body() body: TransferBody) {
         return this.appProvider.makeTransfer(body);
     }

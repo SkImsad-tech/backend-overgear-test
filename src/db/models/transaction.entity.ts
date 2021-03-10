@@ -1,5 +1,5 @@
 import { Entity, Column, Unique, ManyToOne, PrimaryColumn } from "typeorm";
-import { Account } from './account'
+import { Account } from './account.entity'
 
 @Entity()
 @Unique(['paymentId'])

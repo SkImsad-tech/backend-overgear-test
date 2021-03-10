@@ -1,9 +1,11 @@
 import "reflect-metadata";
 import { createConnection, Connection, getConnection } from "typeorm";
-import { User } from "./models/user";
-import { Account } from "./models/account";
-import { Transaction } from './models/transaction'
+import { User } from "./models/user.entity";
+import { Account } from "./models/account.entity";
+import { Transaction } from './models/transaction.entity'
 import customId from 'custom-id';
+import { UserBody, PaymentBody, TransferBody } from '../controller'
+import { HttpException, HttpStatus } from "@nestjs/common";
 
 class MysqlORM {
     private connection: Connection;
@@ -28,97 +30,115 @@ class MysqlORM {
         }).catch(error => console.log(error));
     }
 
-    async makeTransfer(amount: number, emailUserFrom: String, emailUserTo: String): Promise<void> {
+    async makeTransfer(body: TransferBody): Promise<void> {
         const userRepository = this.connection.getRepository(User);
 
         const users = await userRepository
             .createQueryBuilder('user')
             .innerJoinAndSelect('user.account', 'account')
-            .where("user.email = :emailUserFrom OR user.email = :emailUserTo", { emailUserFrom, emailUserTo })
+            .where("user.email = :userFrom OR user.email = :userTo", { userFrom: body.userFrom, userTo: body.userTo })
             .getMany()
 
-        const userFrom = users.find(user => user.email === emailUserFrom)
-        const userTo = users.find(user => user.email === emailUserTo)
+        const userFrom = users.find(user => user.email === body.userFrom)
+        const userTo = users.find(user => user.email === body.userTo)
 
-        if (userFrom && userTo && userFrom.account.amount > amount) {
-            await getConnection().transaction(async transactionalEntityManager => {
-                let transaction = new Transaction();
-                transaction.paymentId = customId({});
-                transaction.accountTo = userTo.account.accountId;
-                transaction.accountFrom = userFrom.account.accountId;
-                transaction.amount = amount;
-                transaction.type = 'transfer';
-
-                await transactionalEntityManager.save(transaction);
-
-                const accountsRepository = await transactionalEntityManager.getRepository(Account);
-                
-                let accountFrom = userFrom.account;
-                accountFrom.amount = accountFrom.amount - amount;
-                await accountsRepository.save(accountFrom);
-
-                let accountTo = userTo.account;
-                accountTo.amount = accountTo.amount + amount;
-                await accountsRepository.save(accountTo);
-            });
+        if (userFrom && userTo && userFrom.account.amount > body.amount) {
+            try {
+                await getConnection().transaction(async transactionalEntityManager => {
+                    let transaction = new Transaction();
+                    transaction.paymentId = body.paymentId || customId({});
+                    transaction.accountTo = userTo.account.accountId;
+                    transaction.accountFrom = userFrom.account.accountId;
+                    transaction.amount = body.amount;
+                    transaction.type = 'transfer';
+    
+                    await transactionalEntityManager.save(transaction);
+    
+                    const accountsRepository = await transactionalEntityManager.getRepository(Account);
+                    
+                    let accountFrom = userFrom.account;
+                    accountFrom.amount = accountFrom.amount - body.amount;
+                    await accountsRepository.save(accountFrom);
+    
+                    let accountTo = userTo.account;
+                    accountTo.amount = accountTo.amount + body.amount;
+                    await accountsRepository.save(accountTo);
+                });
+            } catch (error) {
+                throw new HttpException('not modified', HttpStatus.NOT_MODIFIED);
+            }
         }
     }
 
-    async makePayment(amount: number, paymentId: String, email: String): Promise<void> {
+    async makePayment(body: PaymentBody): Promise<void> {
         const userRepository = this.connection.getRepository(User);
         const transactionRepository = this.connection.getRepository(Transaction);
 
         const user = await userRepository
             .createQueryBuilder('user')
             .innerJoinAndSelect('user.account', 'account')
-            .where("user.email = :email", { email })
+            .where("user.email = :email", { email: body.email })
             .getOne()
 
-        const transactionObject = await transactionRepository.findOne({ paymentId }) 
+        const transactionObject = await transactionRepository.findOne({ paymentId: body.paymentId }) 
 
         if (!transactionObject && user) {
-            await getConnection().transaction(async transactionalEntityManager => {
-                let transaction = new Transaction();
-                transaction.paymentId = paymentId;
-                transaction.accountTo = user.account.accountId;
-                transaction.amount = amount;
-                transaction.type = 'payment';
-
-                await transactionalEntityManager.save(transaction);
-
-                let account = user.account;
-                const accountsRepository = await transactionalEntityManager.getRepository(Account);
-
-                account.amount = account.amount + amount;
-                await accountsRepository.save(account);
-            });
+            try {
+                await getConnection().transaction(async transactionalEntityManager => {
+                    let transaction = new Transaction();
+                    transaction.paymentId = body.paymentId;
+                    transaction.accountTo = user.account.accountId;
+                    transaction.amount = body.amount;
+                    transaction.type = 'refill';
+    
+                    await transactionalEntityManager.save(transaction);
+    
+                    let account = user.account;
+                    const accountsRepository = await transactionalEntityManager.getRepository(Account);
+    
+                    account.amount = account.amount + body.amount;
+                    await accountsRepository.save(account);
+                });
+            } catch (error) {
+                throw new HttpException('not modified', HttpStatus.NOT_MODIFIED);
+            }
         }
-
-        const result = await transactionRepository.findOne({ paymentId }) 
-
     }
 
     getUsers(): Promise<User[]> {
-        let userRepository = this.connection.getRepository(User);
-        return userRepository.find({ relations: ['account'] })
+        try {
+            let userRepository = this.connection.getRepository(User);
+            return userRepository.find({ relations: ['account'] })
+        } catch (error) {
+            throw new HttpException('not found', HttpStatus.NOT_FOUND);
+        }
     }
 
     getAccounts(): Promise<Account[]> {
-        let accountsRepository = this.connection.getRepository(Account);
-        return accountsRepository.find();
+        try {
+            let accountsRepository = this.connection.getRepository(Account);
+            return accountsRepository.find();
+        } catch (error) {
+            throw new HttpException('not found', HttpStatus.NOT_FOUND);
+
+        }
     }
 
-    createUser(email: string): void {
-        let user = new User();
-        user.email = email;
-
-        let account = new Account();
-        account.amount = 0; 
-
-        user.account = account;
-
-        let userRepository = this.connection.getRepository(User);
-        userRepository.save(user);
+    createUser(body: UserBody): void {
+        try {
+            let user = new User();
+            user.email = body.email;
+    
+            let account = new Account();
+            account.amount = 0; 
+    
+            user.account = account;
+    
+            let userRepository = this.connection.getRepository(User);
+            userRepository.save(user);
+        } catch (error) {
+            throw new HttpException('not modified', HttpStatus.NOT_MODIFIED);
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, Unique, OneToOne, OneToMany, JoinColumn } from "typeorm";
-import { User } from './user'
-import { Transaction } from './transaction'
+import { User } from './user.entity'
+import { Transaction } from './transaction.entity'
 
 @Entity()
 @Unique(['userId', 'accountId'])
