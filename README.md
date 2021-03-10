@@ -1,15 +1,10 @@
-## Available Scripts
+## Запуск
 
-In the project directory, you can run:
+Приложение запускается командой `docker-compose up --build`
+Запускаются контейнер приложения и БД mysql.
 
-### `yarn start`
+Для запуска нужны свободные порты 3000 и 3306
 
-Runs the app in the development mode.\
+### Доступ к АПИ 
 
-**TODO - how to access API**
-
-The project will reload if you make edits.\
-
-### `yarn build`
-
-Builds the app for production to the `build` folder.\
+После запуска приложения можно посмотреть апи, перейдя по адресу `http://localhost:3000/api/`
