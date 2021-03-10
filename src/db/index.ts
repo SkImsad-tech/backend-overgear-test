@@ -12,7 +12,7 @@ class MysqlORM {
     constructor() {
         createConnection({
             type: "mysql",
-            host: "localhost",
+            host: "mysql",
             port: 3306,
             username: "root",
             password: "123698741",
@@ -42,8 +42,8 @@ class MysqlORM {
         const userFrom = users.find(user => user.email === body.userFrom)
         const userTo = users.find(user => user.email === body.userTo)
 
-        if (userFrom && userTo && userFrom.account.amount > body.amount) {
-            try {
+        try {
+            if (userFrom && userTo && userFrom.account.amount > body.amount) {
                 await getConnection().transaction(async transactionalEntityManager => {
                     let transaction = new Transaction();
                     transaction.paymentId = body.paymentId || customId({});
@@ -64,9 +64,9 @@ class MysqlORM {
                     accountTo.amount = accountTo.amount + body.amount;
                     await accountsRepository.save(accountTo);
                 });
-            } catch (error) {
-                throw new HttpException('not modified', HttpStatus.NOT_MODIFIED);
-            }
+            } else throw Error()
+        } catch (error) {
+            throw new HttpException('not modified', HttpStatus.NOT_MODIFIED);
         }
     }
 
@@ -82,8 +82,8 @@ class MysqlORM {
 
         const transactionObject = await transactionRepository.findOne({ paymentId: body.paymentId }) 
 
+        try {
         if (!transactionObject && user) {
-            try {
                 await getConnection().transaction(async transactionalEntityManager => {
                     let transaction = new Transaction();
                     transaction.paymentId = body.paymentId;
@@ -99,9 +99,9 @@ class MysqlORM {
                     account.amount = account.amount + body.amount;
                     await accountsRepository.save(account);
                 });
-            } catch (error) {
-                throw new HttpException('not modified', HttpStatus.NOT_MODIFIED);
-            }
+            } else throw Error()
+        } catch (error) {
+            throw new HttpException('not modified', HttpStatus.NOT_MODIFIED);
         }
     }
 
