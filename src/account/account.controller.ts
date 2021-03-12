@@ -1,4 +1,4 @@
-import { Controller, Get, Post, HttpCode, Body,  } from '@nestjs/common'
+import { Controller, Get, Post, HttpCode, Body } from '@nestjs/common'
 import { AccountProvider } from './account.provider'
 import { Account } from './account.entity'
 import { ApiBody, ApiCreatedResponse, ApiProperty } from '@nestjs/swagger'
