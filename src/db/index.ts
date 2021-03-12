@@ -4,7 +4,7 @@ import { User } from "./models/user.entity";
 import { Account } from "./models/account.entity";
 import { Transaction } from './models/transaction.entity'
 import customId from 'custom-id';
-import { UserBody, PaymentBody, TransferBody } from '../controller'
+import { UserBody, PaymentBody, TransferBody } from '../app.controller'
 import { HttpException, HttpStatus } from "@nestjs/common";
 
 class MysqlORM {

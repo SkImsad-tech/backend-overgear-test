@@ -1,5 +1,5 @@
 import { Controller, Get, Post, HttpCode, Body,  } from '@nestjs/common'
-import { AppProvider } from './provider'
+import { AppProvider } from './app.provider'
 import { User } from './db/models/user.entity'
 import { Account } from './db/models/account.entity'
 import { ApiBody, ApiCreatedResponse, ApiProperty } from '@nestjs/swagger'
@@ -62,7 +62,7 @@ export class AppController {
     }
 
     @Post('/accounts/transfer')
-    @ApiCreatedResponse({ description: 'Метод перевода денежных средств с аккаунта на аккаунт' })
+    @ApiCreatedResponse({ description: 'Метод перевода денежных средств с аккаунта на аккаунт. Изначально не идемпотентен. Желательно передавать paymentId' })
     @HttpCode(200)
     @ApiBody({ type: TransferBody })
     Transfer(@Body() body: TransferBody) {

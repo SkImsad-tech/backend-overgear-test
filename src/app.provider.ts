@@ -2,7 +2,7 @@ import { Body, HttpStatus, Injectable } from '@nestjs/common';
 import { db } from './db/index'
 import { User } from './db/models/user.entity'
 import { Account } from './db/models/account.entity'
-import { UserBody, PaymentBody, TransferBody } from './controller'
+import { UserBody, PaymentBody, TransferBody } from './app.controller'
 
 @Injectable()
 export class AppProvider {
