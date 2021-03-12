@@ -5,7 +5,7 @@
     "username": "root",
     "password": "123698741",
     "database": "test",
-    "entities": ["dist/**/*.entity{.ts,.js}"],
+    "entities":  ["build/**/*.entity.js"],
     "synchronize": true,
     "logging": false
   }

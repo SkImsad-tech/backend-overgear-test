@@ -1,6 +1,5 @@
-import { access } from "fs";
 import { Entity, Column, PrimaryGeneratedColumn, Unique, OneToOne } from "typeorm";
-import { Account } from './account.entity'
+import { Account } from '../account/account.entity'
 
 @Entity()
 @Unique(['email', 'userId'])
