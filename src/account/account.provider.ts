@@ -2,7 +2,7 @@ import { Body, HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Account } from './account.entity'
 import { Transaction } from './transaction.entity'
 import { PaymentBody, TransferBody } from './account.controller'
-import { Connection, getConnection } from 'typeorm';
+import { Connection, getConnection, EntityManager } from 'typeorm';
 import { User } from '../user/user.entity'
 import customId from 'custom-id';
 
@@ -10,10 +10,48 @@ import customId from 'custom-id';
 export class AccountProvider {
     constructor(private connection: Connection) {}
 
+    private reduceAmount(manager: EntityManager, accountId: Number, amount: number) {
+
+        console.log('started amount reducer');
+
+        return manager
+            .createQueryBuilder()
+            .update('Account')
+            .set({
+                amount: () => `amount - ${amount}`
+            })
+            .where('account.accountId = :accountId', { accountId })
+            .andWhere('account.amount >= :amount', { amount })
+            .execute();
+    }
+
+    private increaseAmount(manager: EntityManager, accountId: Number, amount: number) {
+        
+        console.log('started amount increaser');
+
+        return manager
+            .createQueryBuilder()
+            .update('Account')
+            .set({
+                amount: () => `amount + ${amount}`
+            })
+            .where('account.accountId = :accountId', { accountId })
+            .execute();
+    } 
+
     getAccounts(): Promise<Account[]> {
         try {
             let accountsRepository = this.connection.getRepository(Account);
             return accountsRepository.find();
+        } catch (error) {
+            throw new HttpException('not found', HttpStatus.NOT_FOUND);
+        }
+    }
+
+    getTransactions(): Promise<Transaction[]>{
+        try {
+            let transactionRepository = this.connection.getRepository(Transaction);
+            return transactionRepository.find();
         } catch (error) {
             throw new HttpException('not found', HttpStatus.NOT_FOUND);
         }
@@ -55,40 +93,41 @@ export class AccountProvider {
     }
 
     async makeTransfer(@Body() body: TransferBody): Promise<void> {
-        const userRepository = this.connection.getRepository(User);
-
-        const users = await userRepository
-            .createQueryBuilder('user')
-            .innerJoinAndSelect('user.account', 'account')
-            .where("user.email = :userFrom OR user.email = :userTo", { userFrom: body.userFrom, userTo: body.userTo })
-            .getMany()
-
-        const userFrom = users.find(user => user.email === body.userFrom)
-        const userTo = users.find(user => user.email === body.userTo)
-
         try {
-            if (userFrom && userTo && userFrom.account.amount > body.amount) {
-                await getConnection().transaction(async transactionalEntityManager => {
-                    let transaction = new Transaction();
-                    transaction.paymentId = body.paymentId || customId({});
-                    transaction.accountTo = userTo.account.accountId;
-                    transaction.accountFrom = userFrom.account.accountId;
-                    transaction.amount = body.amount;
-                    transaction.type = 'transfer';
-    
-                    await transactionalEntityManager.save(transaction);
-    
-                    const accountsRepository = await transactionalEntityManager.getRepository(Account);
-                    
-                    let accountFrom = userFrom.account;
-                    accountFrom.amount = accountFrom.amount - body.amount;
-                    await accountsRepository.save(accountFrom);
-    
-                    let accountTo = userTo.account;
-                    accountTo.amount = accountTo.amount + body.amount;
-                    await accountsRepository.save(accountTo);
-                });
-            } else throw Error()
+            await getConnection().transaction(async transactionalEntityManager => {
+            const userRepository = this.connection.getRepository(User);
+
+            const users = await userRepository
+                .createQueryBuilder('user')
+                .innerJoinAndSelect('user.account', 'account')
+                .where("user.email = :userFrom OR user.email = :userTo", { userFrom: body.userFrom, userTo: body.userTo })
+                .getMany()
+
+                const userFrom = users.find(user => user.email === body.userFrom)
+                const userTo = users.find(user => user.email === body.userTo)
+
+                console.log('started transaction');
+                let transaction = new Transaction();
+                transaction.paymentId = body.paymentId || customId({});
+                if (!userTo || ! userFrom) {
+                    throw Error('did not found user accounts')
+                }
+
+                transaction.accountTo = userTo.account.accountId;
+                transaction.accountFrom = userFrom.account.accountId;
+                transaction.amount = body.amount;
+                transaction.type = 'transfer';
+
+                await transactionalEntityManager.save(transaction);
+
+                console.log('saved transaction');
+
+                const res = await this.reduceAmount(transactionalEntityManager, userFrom.account.accountId, body.amount)
+                console.log('result from reduceAmount', res);
+                if (res.affected) {
+                    this.increaseAmount(transactionalEntityManager, userTo.account.accountId, body.amount)
+                }
+            });
         } catch (error) {
             throw new HttpException('not modified', HttpStatus.NOT_MODIFIED);
         }
