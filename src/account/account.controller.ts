@@ -34,7 +34,7 @@ export class AccountController {
     }
 
     @Post('/payment')
-    @ApiCreatedResponse({ description: 'Метод зачисления денежных средств на аккаунт из сторонней систему' })
+    @ApiCreatedResponse({ description: 'Метод зачисления денежных средств на аккаунт из сторонней системы' })
     @HttpCode(200)
     @ApiBody({ type: PaymentBody })
     Payment(@Body() body: PaymentBody) {
@@ -47,5 +47,11 @@ export class AccountController {
     @ApiBody({ type: TransferBody })
     Transfer(@Body() body: TransferBody) {
         return this.accountProvider.makeTransfer(body);
+    }
+
+    @Get('/transactions')
+    @ApiCreatedResponse({ description: 'Метод Получения списка всех операции перевода/зачисления денежных средств' })
+    getTransactions() {
+        return this.accountProvider.getTransactions();
     }
 }
