@@ -13,10 +13,42 @@ services:
     expose:
     - 3306
 
-  app:
+  app1:
     build: .
     restart: always
     ports: 
       - 3000:3000
+    depends_on:
+      - mysql
+
+  app2:
+    build: .
+    restart: always
+    ports: 
+      - 3001:3000
+    depends_on:
+      - mysql
+
+  app3:
+    build: .
+    restart: always
+    ports: 
+      - 3002:3000
+    depends_on:
+      - mysql
+
+  app4:
+    build: .
+    restart: always
+    ports: 
+      - 3003:3000
+    depends_on:
+      - mysql
+
+  app5:
+    build: .
+    restart: always
+    ports: 
+      - 3004:3000
     depends_on:
       - mysql
