@@ -11,14 +11,11 @@ export class AccountProvider {
     constructor(private connection: Connection) {}
 
     private reduceAmount(manager: EntityManager, accountId: Number, amount: number) {
-
-        console.log('started amount reducer');
-
         return manager
             .createQueryBuilder()
             .update('Account')
             .set({
-                amount: () => `amount - ${amount}`
+                amount: () => `amount - ${+amount.toFixed(2)}`
             })
             .where('account.accountId = :accountId', { accountId })
             .andWhere('account.amount >= :amount', { amount })
@@ -26,18 +23,47 @@ export class AccountProvider {
     }
 
     private increaseAmount(manager: EntityManager, accountId: Number, amount: number) {
-        
-        console.log('started amount increaser');
-
         return manager
             .createQueryBuilder()
             .update('Account')
             .set({
-                amount: () => `amount + ${amount}`
+                amount: () => `amount + ${+amount.toFixed(2)}`
             })
             .where('account.accountId = :accountId', { accountId })
             .execute();
     } 
+
+    private async recordTransaction(
+        manager: EntityManager,
+        paymentId: string,
+        amount: Number,
+        type: string,
+        accountTo: Number,
+        accountFrom?: Number
+    ) {
+        let transaction = new Transaction();
+        transaction.paymentId = paymentId;
+        transaction.accountTo = accountTo;
+        if (accountFrom) { transaction.accountFrom = accountFrom; }
+        transaction.amount = +amount.toFixed(2);
+        transaction.type = type;
+
+        await manager.save(transaction);
+    }
+
+    private async getUserAccounts (manager: EntityManager, emailTo?: string, emailFrom?: string ) {
+        const users = await manager
+            .getRepository(User)
+            .createQueryBuilder('user')
+            .innerJoinAndSelect('user.account', 'account')
+            .where("user.email = :emailFrom OR user.email = :emailTo", { emailFrom, emailTo })
+            .getMany()
+
+            const userFrom = users.find(user => user.email === emailFrom)
+            const userTo = users.find(user => user.email === emailTo)
+
+            return { userFrom, userTo }
+    }
 
     getAccounts(): Promise<Account[]> {
         try {
@@ -58,78 +84,49 @@ export class AccountProvider {
     }
 
     async makePayment(@Body() body: PaymentBody): Promise<void> {
-        const userRepository = this.connection.getRepository(User);
-        const transactionRepository = this.connection.getRepository(Transaction);
-
-        const user = await userRepository
-            .createQueryBuilder('user')
-            .innerJoinAndSelect('user.account', 'account')
-            .where("user.email = :email", { email: body.email })
-            .getOne()
-
-        const transactionObject = await transactionRepository.findOne({ paymentId: body.paymentId }) 
-
         try {
-        if (!transactionObject && user) {
-                await getConnection().transaction(async transactionalEntityManager => {
-                    let transaction = new Transaction();
-                    transaction.paymentId = body.paymentId;
-                    transaction.accountTo = user.account.accountId;
-                    transaction.amount = body.amount;
-                    transaction.type = 'refill';
-    
-                    await transactionalEntityManager.save(transaction);
-    
-                    let account = user.account;
-                    const accountsRepository = await transactionalEntityManager.getRepository(Account);
-    
-                    account.amount = account.amount + body.amount;
-                    await accountsRepository.save(account);
-                });
-            } else throw Error()
-        } catch (error) {
-            throw new HttpException('not modified', HttpStatus.NOT_MODIFIED);
+            await getConnection().transaction(async transactionalEntityManager => {
+                const transactionObject = await transactionalEntityManager.getRepository(Transaction).findOne({ paymentId: body.paymentId }) 
+                if (transactionObject) { throw Error('Transaction already exist') }
+
+                const { userTo } = await this.getUserAccounts(transactionalEntityManager, body.email)
+                if (!userTo) { throw Error('did not found receiver account') }
+
+                await this.recordTransaction(transactionalEntityManager, body.paymentId, body.amount, 'refill', userTo.account.accountId)
+                await this.increaseAmount(transactionalEntityManager, userTo.account.accountId, body.amount);
+            });
+        } catch (error: any) {
+            throw new HttpException(error.message || 'not modified', HttpStatus.NOT_MODIFIED);
         }
     }
 
     async makeTransfer(@Body() body: TransferBody): Promise<void> {
         try {
             await getConnection().transaction(async transactionalEntityManager => {
-            const userRepository = this.connection.getRepository(User);
-
-            const users = await userRepository
-                .createQueryBuilder('user')
-                .innerJoinAndSelect('user.account', 'account')
-                .where("user.email = :userFrom OR user.email = :userTo", { userFrom: body.userFrom, userTo: body.userTo })
-                .getMany()
-
-                const userFrom = users.find(user => user.email === body.userFrom)
-                const userTo = users.find(user => user.email === body.userTo)
-
-                console.log('started transaction');
-                let transaction = new Transaction();
-                transaction.paymentId = body.paymentId || customId({});
-                if (!userTo || ! userFrom) {
-                    throw Error('did not found user accounts')
+                if (body.paymentId) {
+                    const transactionObject = await transactionalEntityManager.getRepository(Transaction).findOne({ paymentId: body.paymentId })
+                    if (transactionObject) { throw Error('Transaction already exist') }
                 }
 
-                transaction.accountTo = userTo.account.accountId;
-                transaction.accountFrom = userFrom.account.accountId;
-                transaction.amount = body.amount;
-                transaction.type = 'transfer';
+                const { userFrom, userTo } = await this.getUserAccounts(transactionalEntityManager, body.userTo, body.userFrom)
 
-                await transactionalEntityManager.save(transaction);
+                if (!userFrom) { throw Error('did not found user originator account') }
+                if (!userTo) { throw Error('did not found receiver account') }
 
-                console.log('saved transaction');
+                await this.recordTransaction(
+                    transactionalEntityManager,
+                    body.paymentId || customId({}),
+                    body.amount,
+                    'transfer',
+                    userTo.account.accountId,
+                    userFrom.account.accountId
+                )
 
                 const res = await this.reduceAmount(transactionalEntityManager, userFrom.account.accountId, body.amount)
-                console.log('result from reduceAmount', res);
-                if (res.affected) {
-                    this.increaseAmount(transactionalEntityManager, userTo.account.accountId, body.amount)
-                }
+                if (res.affected) { this.increaseAmount(transactionalEntityManager, userTo.account.accountId, body.amount) }
             });
         } catch (error) {
-            throw new HttpException('not modified', HttpStatus.NOT_MODIFIED);
+            throw new HttpException(error.message || 'not modified', HttpStatus.NOT_MODIFIED);
         }
     }
 }
