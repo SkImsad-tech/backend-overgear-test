@@ -2,13 +2,16 @@ import { Controller, Get, Post, HttpCode, Body, Param } from '@nestjs/common'
 import { UserProvider } from './users.provider'
 import { User } from './user.entity'
 import { ApiBody, ApiCreatedResponse, ApiProperty } from '@nestjs/swagger'
+import { IsEmail, IsString } from 'class-validator'
 
 export class UserBody {
     @ApiProperty({ type: String, description: 'email' })
+    @IsEmail()
     email: string;
 }
 
 export class UserParams {
+    @IsString()
     id: string;
 }
 
