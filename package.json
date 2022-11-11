@@ -12,7 +12,7 @@
   "keywords": [
     "overgear"
   ],
-  "author": "LYSAK",
+  "author": "Lysak",
   "license": "UNLICENSED",
   "devDependencies": {
     "@types/express": "^4.17.11",
