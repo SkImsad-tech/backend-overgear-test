@@ -7,7 +7,8 @@
     "start": "nest start",
     "build": "rimraf ./build && tsc",
     "start:dev": "nodemon -x ts-node src/index.ts",
-    "compose": "docker-compose up -d"
+    "compose": "docker-compose up -d",
+    "build-compose": "docker-compose up --build -d"
   },
   "keywords": [
     "overgear"

@@ -16,39 +16,49 @@ services:
   app1:
     build: .
     restart: always
+    environment:
+      - MYSQL_CONNECTION_STRING=mysql
     ports:
-      - 3000:3001
+      - 3001:3000
     depends_on:
       - mysql
 
   app2:
     build: .
     restart: always
+    environment:
+      - MYSQL_CONNECTION_STRING=mysql
     ports:
-      - 3000:3002
+      - 3002:3000
     depends_on:
       - mysql
 
   app3:
     build: .
     restart: always
+    environment:
+      - MYSQL_CONNECTION_STRING=mysql
     ports:
-      - 3000:3003
+      - 3003:3000
     depends_on:
       - mysql
 
   app4:
     build: .
     restart: always
+    environment:
+      - MYSQL_CONNECTION_STRING=mysql
     ports:
-      - 3000:3004
+      - 3004:3000
     depends_on:
       - mysql
 
   app5:
     build: .
     restart: always
+    environment:
+      - MYSQL_CONNECTION_STRING=mysql
     ports:
-      - 3000:3005
+      - 3005:3000
     depends_on:
       - mysql

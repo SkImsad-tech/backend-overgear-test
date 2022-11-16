@@ -10,7 +10,7 @@ import { Transaction } from "./transactions/transaction.entity";
   imports: [
     TypeOrmModule.forRoot({
       type: "mysql",
-      host: "localhost",
+      host: process.env.MYSQL_CONNECTION_STRING || "localhost",
       port: 3306,
       username: "root",
       password: "123698741",
