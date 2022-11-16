@@ -37,3 +37,13 @@
 ### Доступ к АПИ
 
 После запуска приложения можно посмотреть апи, сгенерированное с помощью swagger. Перейдите по по ссылке `http://localhost:3000/api/`
+
+P.S. не забудьте удалить контейнеры с образами из докера после использования. 🙃
+
+### Источники
+
+- [stackacademy](https://stackacademy.tv/)
+- [nginx.org](https://nginx.org/)
+- [common pitfalls](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls)
+- [nestjs.com](https://docs.nestjs.com/)
+- [typeorm.io](https://typeorm.io/)

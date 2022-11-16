@@ -1,20 +1,27 @@
-import { Module } from '@nestjs/common'
-import { TypeOrmModule, } from '@nestjs/typeorm';
-import { getConnectionOptions, Connection } from 'typeorm'
-import { UsersModule } from './user/users.model'
-import { AccountModule } from './account/account.model'
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { UserModule } from "./user/user.module";
+import { AccountModule } from "./account/account.module";
+import { User } from "./user/user.entity";
+import { Account } from "./account/account.entity";
+import { Transaction } from "./transactions/transaction.entity";
 
 @Module({
-    imports: [
-        TypeOrmModule.forRootAsync({
-            useFactory: async () =>
-            Object.assign(await getConnectionOptions(), {
-              autoLoadEntities: true,
-            }),
-        }),
-        UsersModule,
-        AccountModule
-    ],
+  imports: [
+    TypeOrmModule.forRoot({
+      type: "mysql",
+      host: "localhost",
+      port: 3306,
+      username: "root",
+      password: "123698741",
+      database: "test",
+      synchronize: true,
+      logging: false,
+      entities: [User, Account, Transaction],
+    }),
+    UserModule,
+    AccountModule,
+  ],
+  controllers: [],
 })
-
 export class AppModule {}

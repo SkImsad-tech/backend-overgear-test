@@ -1,22 +1,22 @@
-import { ValidationPipe } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core'
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
-import { AppModule } from './app.module'
+import { ValidationPipe } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { AppModule } from "./app.module";
 
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule);
-    app.useGlobalPipes(new ValidationPipe());
+  const app = await NestFactory.create(AppModule);
+  app.useGlobalPipes(new ValidationPipe());
 
-    const options = new DocumentBuilder()
-        .setTitle('overgear API')
-        .setDescription('test API for overgear')
-        .setVersion('1.0.0')
-        .build();
+  const options = new DocumentBuilder()
+    .setTitle("overgear API")
+    .setDescription("test API for overgear")
+    .setVersion("1.0.0")
+    .build();
 
-    const document = SwaggerModule.createDocument(app, options);
-    SwaggerModule.setup('api', app, document);
+  const document = SwaggerModule.createDocument(app, options);
+  SwaggerModule.setup("api", app, document);
 
-    await app.listen(3000);
+  await app.listen(3000);
 }
 
 bootstrap();

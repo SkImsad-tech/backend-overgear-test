@@ -1,18 +1,23 @@
-import { Entity, Column, PrimaryGeneratedColumn, Unique, OneToOne } from "typeorm";
-import { Account } from '../account/account.entity'
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  Unique,
+  OneToOne,
+} from "typeorm";
+import { Account } from "../account/account.entity";
 
 @Entity()
-@Unique(['email', 'userId'])
+@Unique(["email", "userId"])
 export class User {
+  @PrimaryGeneratedColumn()
+  userId: number;
 
-    @PrimaryGeneratedColumn()
-    userId: Number;
-    
-    @Column()
-    email: String;
+  @Column()
+  email: string;
 
-    @OneToOne(type => Account, account => account.userId, {
-        cascade: true
-    })
-    account: Account
+  @OneToOne((type) => Account, (account) => account.userId, {
+    cascade: true,
+  })
+  account: Account;
 }
